@@ -1,45 +1,19 @@
 {
   "fill": {
-    "automatic-gradient": "srgb:0.10,0.32,0.92,1.0"
+    "solid": "srgb:0.95686,0.94510,0.90196,1.00000"
   },
   "groups": [
     {
       "layers": [
         {
-          "name": "Back print",
-          "image-name": "Back-print.svg",
+          "name": "Aperture",
+          "image-name": "Aperture.svg",
           "glass": true
         }
       ],
       "shadow": {
         "kind": "neutral",
-        "opacity": 0.18
-      }
-    },
-    {
-      "layers": [
-        {
-          "name": "Front print",
-          "image-name": "Front-print.svg",
-          "glass": true
-        }
-      ],
-      "shadow": {
-        "kind": "neutral",
-        "opacity": 0.18
-      }
-    },
-    {
-      "layers": [
-        {
-          "name": "Landscape",
-          "image-name": "Landscape.svg",
-          "glass": true
-        }
-      ],
-      "shadow": {
-        "kind": "neutral",
-        "opacity": 0.18
+        "opacity": 0.14
       }
     }
   ],
