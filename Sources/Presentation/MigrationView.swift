@@ -10,7 +10,16 @@ struct MigrationView: View {
     @State private var exhaustive = false
     @State private var busy = false
     @State private var focused: URL?
-    @State private var filter: Verdict?
+    private enum Category: Hashable {
+        case all, verdict(Verdict)
+    }
+
+    @State private var category: Category? = .all
+    @State private var showingGuide = false
+    private var filter: Verdict? {
+        if case let .verdict(value) = category { return value }
+        return nil
+    }
     @State private var confirm = false
 
     @State private var folderName = ""
@@ -20,14 +29,18 @@ struct MigrationView: View {
 
     var body: some View {
         NavigationSplitView {
-            List {
+            List(selection: $category) {
                 Section("迁移清单") {
-                    filterButton(nil, title: "全部文件", icon: "photo.stack", color: .accentColor)
-                    ForEach([Verdict.fresh, .duplicate, .review, .screenshot, .failed, .imported], id: \.self) { v in
-                        filterButton(v, title: v.rawValue, icon: v.icon, color: v.tint)
+                    Label("全部文件", systemImage: "photo.stack")
+                        .badge(rows.count).tag(Category.all)
+                    ForEach([Verdict.fresh, .duplicate, .review, .screenshot, .failed, .imported], id: \.self) { verdict in
+                        Label(verdict.rawValue, systemImage: verdict.icon)
+                            .badge(rows.filter { $0.verdict == verdict }.count)
+                            .tag(Category.verdict(verdict))
                     }
                 }
             }.listStyle(.sidebar)
+            .onChange(of: category) { _ in focused = visibleRows.first?.id }
             .navigationSplitViewColumnWidth(min: 170, ideal: 185, max: 230)
             .safeAreaInset(edge: .bottom) {
                 Toggle("全库原件核验", isOn: $exhaustive)
@@ -43,6 +56,7 @@ struct MigrationView: View {
                     Text("把安卓照片带回相册").font(.largeTitle.weight(.semibold))
                     Text("先比对重复项目和截图，再将选中的原件加入「照片」。")
                         .foregroundStyle(.secondary)
+                    Button("如何准备 iCloud 照片？") { showingGuide = true }.buttonStyle(.link)
                     HStack {
                         Button("选择文件夹…", action: choose).buttonStyle(.borderedProminent)
                         Button("体验示例", action: loadDemo)
@@ -92,6 +106,9 @@ struct MigrationView: View {
         .navigationTitle(folderName.isEmpty ? "相集" : folderName)
         .toolbar {
             ToolbarItemGroup {
+                Button { showingGuide = true } label: {
+                    Label("iCloud 照片准备指南", systemImage: "questionmark.circle")
+                }.help("查看 iCloud 照片准备指南")
                 Button(action: choose) { Label("选择文件夹", systemImage: "folder.badge.plus") }
                     .help("选择安卓照片文件夹并扫描").disabled(busy)
                 Button(action: loadDemo) { Label("体验示例", systemImage: "play.rectangle") }
@@ -111,6 +128,7 @@ struct MigrationView: View {
                 .background(.bar)
         }
         .frame(minWidth: 800, minHeight: 480)
+        .sheet(isPresented: $showingGuide) { LibraryGuide() }
         .alert(demo ? "演练导入所选示例？" : "将所选项目导入系统照片图库？", isPresented: $confirm) {
             Button("取消", role: .cancel) {}
             Button(demo ? "演练导入" : "导入") { Task { await runImport() } }
@@ -119,29 +137,13 @@ struct MigrationView: View {
         }
     }
 
-    private func filterButton(_ value: Verdict?, title: String, icon: String, color: Color) -> some View {
-        Button {
-            filter = value
-            focused = visibleRows.first?.id
-        } label: {
-            HStack {
-                Image(systemName: icon).foregroundStyle(color).frame(width: 20)
-                Text(title)
-                Spacer()
-                Text(String(value == nil ? rows.count : rows.filter { $0.verdict == value }.count))
-                    .monospacedDigit().foregroundStyle(.secondary)
-            }.padding(.vertical, 4).contentShape(Rectangle())
-        }.buttonStyle(.plain)
-        .listRowBackground(filter == value ? Color.accentColor.opacity(0.15) : Color.clear)
-    }
-
     private func loadDemo() {
         do {
             let session = try DemoSession()
             sample = session
             folderName = "示例照片"
             busy = true
-            filter = nil
+            category = .all
             focused = nil
             rows = []
             status = "正在扫描示例…"
@@ -163,7 +165,7 @@ struct MigrationView: View {
         guard panel.runModal() == .OK, let url = panel.url else { return }
         sample = nil
         folderName = url.lastPathComponent
-        rows = []; focused = nil; filter = nil; busy = true
+        rows = []; focused = nil; category = .all; busy = true
         status = "正在读取系统照片图库…"
         Task {
             defer { busy = false }

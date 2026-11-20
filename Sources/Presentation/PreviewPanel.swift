@@ -38,13 +38,11 @@ struct PreviewPanel: View {
         }
     }
     func tile(_ title: String, _ image: NSImage?) -> some View {
-        VStack(alignment: .leading, spacing: 6) {
-            Text(title).font(.caption.weight(.medium)).foregroundStyle(.secondary)
-            ZStack {
-                RoundedRectangle(cornerRadius: 8).fill(.quaternary)
+        GroupBox(title) {
+            Group {
                 if let image { Image(nsImage: image).resizable().scaledToFit() }
                 else { Image(systemName: "photo").foregroundStyle(.secondary) }
-            }.frame(maxWidth: .infinity).frame(height: 160).clipShape(RoundedRectangle(cornerRadius: 8))
+            }.frame(maxWidth: .infinity).frame(height: 160)
         }
     }
 }
